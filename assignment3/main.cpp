@@ -45,6 +45,8 @@ int main ()
 
 	majority = majorityElement(stars, d);
 
+	cout << majority << k << endl;
+
 	if(majority > k/2)
 	{
 		cout << majority << endl;
