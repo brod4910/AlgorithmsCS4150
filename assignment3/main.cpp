@@ -4,25 +4,31 @@
 #include <iostream>
 #include <cstdlib>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <cmath>
 
 using namespace std;
 
-struct Star {
+typedef struct Star {
 	long long x;
 	long long y;
-};
+} Star;
 
-int majorityElement(vector<Star> stars, int d);
+Star* majorityElement(vector<Star*> stars, long long d);
+int occurrences(vector<Star*> stars, Star* targetStar, long long d);
 
+/*
+ * Algorithm for majority elements. Method was taken from the slides.
+ * Used the pseudo code from slide number 4
+ */
 int main ()
 {
 	string buffer, d_k;
 	char sizes[2048];
-	int d, k, majority;
-	vector<Star> stars;
-	Star star;
+	long long d, k, differential, occurrences = 0;
+	long long dSquared;
+	vector<Star*> stars;
+	Star* star, *majority, *s;
 
 	// get n and k
 	cin.getline(sizes, 2048);
@@ -30,60 +36,163 @@ int main ()
 	// make the first line a string
 	d_k += sizes;
 
-	// extract both n and k respectively
-	d = stoi(d_k.substr(0, d_k.find(" ")));
-	k = stoi(d_k.substr(d_k.find(" "), d_k.length()));
+	// extract both d and k respectively
+	d = stoll(d_k.substr(0, d_k.find(" ")));
+	k = stoll(d_k.substr(d_k.find(" "), d_k.length()));
 
+	if(k == 0)
+	{
+		cout << "NO" << endl;
+	}
+	else if(k == 1)
+	{
+		cout << 1 << endl;
+	}
+
+	dSquared = pow(d, 2);
 
 	for(int i = 0; i < k; i++)
 	{
 		getline(cin, buffer);
-		star.x = stoi(buffer.substr(0, buffer.find(" ")));
-		star.y = stoi(buffer.substr(buffer.find(" "), buffer.length()));
+		star = new Star;
+		star->x = stoll(buffer.substr(0, buffer.find(" ")));
+		star->y = stoll(buffer.substr(buffer.find(" "), buffer.length()));
 		stars.push_back(star);
 	}
 
-	majority = majorityElement(stars, d);
+	majority = majorityElement(stars, dSquared);
 
-	cout << majority << k << endl;
-
-	if(majority > k/2)
-	{
-		cout << majority << endl;
-	}
-	else
+	if(majority == NULL)
 	{
 		cout << "NO" << endl;
 	}
-}
-
-int majorityElement(vector<Star> stars, int d)
-{
-	unordered_map<int, int> majority;
-	Star s1, s2;
-	int distance;
-	pair<int, int> star;
-
-	int k = stars.size();
-
-	for(int i = 0; i < k; i++)
+	else
 	{
-		if((i + 1) >= k)
+		for(int i = 0; i < k; i++)
 		{
-			break;
+			s = stars[i];
+
+			differential = pow((majority->x - s->x), 2) + pow((majority->y - s->y), 2);
+
+			if(differential <= dSquared)
+			{
+				occurrences++;
+			}
 		}
 
-		s1 = stars[i];
-		s2 = stars[i + 1];
-
-		distance = pow((s1.x - s2.x), 2) + pow((s1.y - s2.y), 2);
-
-		if(distance <= d)
+		if(occurrences < stars.size() / 2)
 		{
-			star = make_pair(i, distance);
-			majority.insert(star);
+			cout << "NO" << endl;
+		}
+		else
+		{
+			cout << occurrences << endl;
+		}
+	}
+}
+
+Star* majorityElement(vector<Star*> stars, long long dSquared)
+{
+	int mid, occurrencesS1, occurrencesS2;
+	Star* s1, *s2;
+
+	if(stars.size() == 0)
+	{
+		return NULL;
+	}
+	else if(stars.size() == 1)
+	{
+		return stars[0];
+	}
+	else if(stars.size() == 2)
+	{
+		if(pow((stars[0]->x - stars[1]->x), 2) + pow((stars[0]->y - stars[1]->y), 2) <= dSquared)
+		{
+			return stars[0];
+		}
+		else
+		{
+			return NULL;
+		}
+	}
+	else
+	{
+		vector<Star*> A1;
+		vector<Star*> A2;
+
+		mid = stars.size() / 2;
+
+		for(int i = 0; i < mid; i++)
+		{
+			A1.push_back(stars[i]);
+		}
+
+		for(int i = mid; i < stars.size(); i++)
+		{
+			A2.push_back(stars[i]);
+		}
+
+		s1 = majorityElement(A1, dSquared);
+		s2 = majorityElement(A2, dSquared);
+
+		if(s1 == NULL && s2 == NULL)
+		{
+			return NULL;
+		}
+		else if(s1 == NULL)
+		{
+			occurrencesS2 = occurrences(stars, s2, dSquared);
+
+			if(occurrencesS2 > stars.size() / 2)
+			{
+				return s2;
+			}
+		}
+		else if(s2  == NULL)
+		{
+			occurrencesS1 = occurrences(stars, s1, dSquared);
+
+			if(occurrencesS1 > stars.size() / 2)
+			{
+				return s1;
+			}
+		}
+		else
+		{
+			occurrencesS1 = occurrences(stars, s1, dSquared);
+			occurrencesS2 = occurrences(stars, s2, dSquared);
+
+			if(occurrencesS1 > stars.size() / 2)
+			{
+				return s1;
+			}
+			else if(occurrencesS2 > stars.size() / 2)
+			{
+				return s2;
+			}
+		}
+		return NULL;
+	}
+
+}
+
+int occurrences(vector<Star*> stars, Star* targetStar, long long dSquared)
+{
+	int count  = 0;
+	long long differential;
+	Star* s;
+
+	for(int i = 0; i < stars.size();i++)
+	{
+		s = stars[i];
+
+		differential = pow((targetStar->x - s->x), 2) + pow((targetStar->y - s->y), 2);
+
+		if(differential <= dSquared)
+		{
+			count ++;
 		}
 	}
 
-	return majority.size();
+	return count;
 }
